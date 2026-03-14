@@ -1,0 +1,20 @@
+.card {
+  background: var(--card);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.dashboard-card {
+  text-align: center;
+}
+
+.dashboard-card h3 {
+  margin: 0;
+  color: var(--text-light);
+}
+
+.dashboard-card h1 {
+  margin-top: 10px;
+  color: var(--primary);
+}

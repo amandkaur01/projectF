@@ -1,0 +1,40 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.table th {
+  background: var(--primary);
+  color: white;
+  padding: 12px;
+}
+
+.table td {
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+/* status badges */
+
+.badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 13px;
+}
+
+.badge-warning {
+  background: #F59E0B;
+}
+
+.badge-info {
+  background: #06B6D4;
+}
+.bg-danger{
+  background:#dc3545;
+}
+
+.badge-success {
+  background: #10B981;
+}
