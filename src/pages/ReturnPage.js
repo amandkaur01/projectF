@@ -66,48 +66,43 @@ function ReturnPage() {
     try {
       const res = await API.put(`/borrow/return/${borrowId}/${qty}`);
 
-      // Backend returns null if qty > remaining or record not found
-      if (!res.data) {
-        const stillLeft = borrowInfo ? borrowInfo.remaining : "some";
-        setMessage({
-          text: `Could not process return. You have ${stillLeft} unit(s) remaining — please enter a quantity between 1 and ${stillLeft}.`,
-          type: "error",
-        });
-        setLoading(false);
-        return;
-      }
-
-      const returned   = qty;
-      const newReturned = res.data.returnedQuantity;
-      const stillLeft  = res.data.quantity - newReturned;
+      // 200 OK with updated borrow record
+      const updated     = res.data;
+      const returned    = qty;
+      const newReturned = updated.returnedQuantity;
+      const stillLeft   = updated.quantity - newReturned;
 
       const successText = stillLeft > 0
-        ? `✅ ${returned} unit(s) of ${res.data.equipmentName} returned successfully. You still have ${stillLeft} unit(s) remaining.`
-        : `✅ All ${returned} unit(s) of ${res.data.equipmentName} returned successfully. Thank you!`;
+        ? `${returned} unit(s) of ${updated.equipmentName} returned successfully. You still have ${stillLeft} unit(s) remaining.`
+        : `All ${returned} unit(s) of ${updated.equipmentName} returned successfully. Thank you!`;
 
       setMessage({ text: successText, type: "success" });
 
-      // Refresh borrow info to show updated state
+      // Update borrow info panel with new remaining count
       if (stillLeft > 0) {
         setBorrowInfo(prev => prev ? {
           ...prev,
           returnedQuantity: newReturned,
           remaining: stillLeft,
-          status: res.data.status,
+          status: updated.status,
         } : null);
         setQuantity(String(stillLeft));
       } else {
-        setBorrowId("");
-        setQuantity("");
-        setBorrowInfo(null);
+        // Fully returned — clear form after short delay
+        setTimeout(() => {
+          setBorrowId("");
+          setQuantity("");
+          setBorrowInfo(null);
+        }, 2500);
       }
 
     } catch (err) {
+      // 400 Bad Request from backend means qty > remaining or invalid borrow ID
       const stillLeft = borrowInfo ? borrowInfo.remaining : null;
       setMessage({
         text: stillLeft !== null
-          ? `Return failed. You have ${stillLeft} unit(s) remaining — please enter a value between 1 and ${stillLeft}.`
-          : "Return failed. Please check your Borrow ID and quantity.",
+          ? `You have ${stillLeft} unit(s) still with you. Please enter a value between 1 and ${stillLeft}.`
+          : "Return failed. Please check your Borrow ID and try again.",
         type: "error",
       });
     } finally {
