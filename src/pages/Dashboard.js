@@ -5,8 +5,8 @@ import axios from "axios";
 import Navbar from "../components/Navbar";
 import useAutoRefresh from "../hooks/useAutoRefresh";
 
-const AI_BASE    = "http://localhost:8080/api/ai";
-const EMAIL_BASE = "http://localhost:8080/api/email";
+const AI_BASE    = "http://https://projectb-cxau.onrender.com/api/ai";
+const EMAIL_BASE = "http://https://projectb-cxau.onrender.com/api/email";
 
 function Dashboard() {
   const navigate = useNavigate();
