@@ -1,18 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import API from "../services/api";
 import Navbar from "../components/Navbar";
+import useAutoRefresh from "../hooks/useAutoRefresh";
 
 function EquipmentList() {
   const [equipment, setEquipment] = useState([]);
   const [search, setSearch]       = useState("");
   const [loading, setLoading]     = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  useEffect(() => {
+  const fetchEquipment = useCallback(() => {
     API.get("/equipment")
-      .then((res) => setEquipment(res.data))
+      .then((res) => {
+        setEquipment(res.data);
+        setLastUpdated(new Date());
+      })
       .catch((err) => console.log(err))
       .finally(() => setLoading(false));
   }, []);
+
+  // Auto-refresh on mount, window focus, and every 30s
+  useAutoRefresh(fetchEquipment, 30000);
 
   const filtered = equipment.filter(
     (e) =>
@@ -22,9 +30,9 @@ function EquipmentList() {
 
   const getAvailabilityBadge = (available, total) => {
     const ratio = total > 0 ? available / total : 0;
-    if (available === 0)   return <span className="sl-badge sl-badge--overdue">Out of Stock</span>;
-    if (ratio < 0.3)       return <span className="sl-badge sl-badge--borrowed">Low Stock</span>;
-    return                        <span className="sl-badge sl-badge--available">Available</span>;
+    if (available === 0)  return <span className="sl-badge sl-badge--overdue">Out of Stock</span>;
+    if (ratio < 0.3)      return <span className="sl-badge sl-badge--borrowed">Low Stock</span>;
+    return                       <span className="sl-badge sl-badge--available">Available</span>;
   };
 
   return (
@@ -33,7 +41,14 @@ function EquipmentList() {
       <div className="sl-content">
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px", marginBottom: "28px" }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "16px",
+          marginBottom: "28px",
+        }}>
           <div className="sl-page-header" style={{ marginBottom: 0 }}>
             <h1 className="sl-page-header__title">
               <div className="sl-page-header__title-icon">🔧</div>
@@ -41,19 +56,35 @@ function EquipmentList() {
             </h1>
             <p className="sl-page-header__subtitle">
               {equipment.length} items in inventory
+              {lastUpdated && (
+                <span style={{ marginLeft: "10px", fontSize: "11px", color: "var(--text-muted)" }}>
+                  · Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
             </p>
           </div>
 
-          {/* Search */}
-          <div className="sl-search-wrap">
-            <span className="sl-search-icon">🔍</span>
-            <input
-              type="text"
-              className="sl-search"
-              placeholder="Search by name or category…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            {/* Manual refresh button */}
+            <button
+              className="sl-btn sl-btn--ghost sl-btn--sm"
+              onClick={fetchEquipment}
+              title="Refresh data"
+            >
+              🔄 Refresh
+            </button>
+
+            {/* Search */}
+            <div className="sl-search-wrap">
+              <span className="sl-search-icon">🔍</span>
+              <input
+                type="text"
+                className="sl-search"
+                placeholder="Search by name or category…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
@@ -76,14 +107,15 @@ function EquipmentList() {
                 {loading ? (
                   <tr>
                     <td colSpan="7" className="sl-table-empty">
-                      <span className="sl-spinner sl-spinner--teal" style={{ verticalAlign: "middle", marginRight: "8px" }} />
+                      <span className="sl-spinner sl-spinner--teal"
+                        style={{ verticalAlign: "middle", marginRight: "8px" }} />
                       Loading equipment…
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="sl-table-empty">
-                      🔍 No equipment found matching "{search}"
+                      🔍 No equipment found{search ? ` matching "${search}"` : ""}
                     </td>
                   </tr>
                 ) : (
@@ -92,12 +124,26 @@ function EquipmentList() {
                       <td>{idx + 1}</td>
                       <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{e.name}</td>
                       <td>
-                        <span style={{ background: "var(--teal-100)", color: "var(--teal-800)", padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                        <span style={{
+                          background: "var(--teal-100)",
+                          color: "var(--teal-800)",
+                          padding: "3px 10px",
+                          borderRadius: "20px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}>
                           {e.category}
                         </span>
                       </td>
                       <td>{e.totalQuantity}</td>
-                      <td style={{ fontWeight: 700, color: e.availableQuantity === 0 ? "#b91c1c" : "var(--primary-dark)" }}>
+                      <td style={{
+                        fontWeight: 700,
+                        color: e.availableQuantity === 0
+                          ? "#b91c1c"
+                          : e.availableQuantity / e.totalQuantity < 0.3
+                          ? "#b45309"
+                          : "var(--primary-dark)",
+                      }}>
                         {e.availableQuantity}
                       </td>
                       <td>{e.location}</td>
@@ -112,10 +158,24 @@ function EquipmentList() {
 
         {/* Summary Footer */}
         {!loading && equipment.length > 0 && (
-          <div style={{ marginTop: "16px", fontSize: "13px", color: "var(--text-muted)", display: "flex", gap: "24px", flexWrap: "wrap" }}>
+          <div style={{
+            marginTop: "16px",
+            fontSize: "13px",
+            color: "var(--text-muted)",
+            display: "flex",
+            gap: "24px",
+            flexWrap: "wrap",
+          }}>
             <span>📦 Total Items: <strong>{equipment.length}</strong></span>
-            <span>✅ In Stock: <strong>{equipment.filter(e => e.availableQuantity > 0).length}</strong></span>
-            <span>❌ Out of Stock: <strong>{equipment.filter(e => e.availableQuantity === 0).length}</strong></span>
+            <span style={{ color: "#065f46" }}>
+              ✅ In Stock: <strong>{equipment.filter(e => e.availableQuantity > 0).length}</strong>
+            </span>
+            <span style={{ color: "#b91c1c" }}>
+              ❌ Out of Stock: <strong>{equipment.filter(e => e.availableQuantity === 0).length}</strong>
+            </span>
+            <span style={{ color: "#b45309" }}>
+              ⚠️ Low Stock: <strong>{equipment.filter(e => e.availableQuantity > 0 && e.availableQuantity / e.totalQuantity < 0.3).length}</strong>
+            </span>
           </div>
         )}
 

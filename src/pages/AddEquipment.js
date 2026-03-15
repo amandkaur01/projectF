@@ -3,8 +3,20 @@ import API from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
+const CATEGORIES = [
+  "Microcontroller",
+  "Sensor",
+  "Measurement",
+  "Power Supply",
+  "Tool",
+  "Module",
+  "Display",
+  "Other",
+];
+
 function AddEquipment() {
   const navigate = useNavigate();
+
   const [equipment, setEquipment] = useState({
     name: "",
     category: "",
@@ -12,22 +24,58 @@ function AddEquipment() {
     availableQuantity: "",
     location: "",
   });
+
+  const [customCategory, setCustomCategory] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError]     = useState("");
 
-  const handleChange = (e) =>
-    setEquipment({ ...equipment, [e.target.name]: e.target.value });
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const isOther = equipment.category === "Other";
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEquipment({ ...equipment, [name]: value });
+
+    // Reset custom category when user switches away from Other
+    if (name === "category" && value !== "Other") {
+      setCustomCategory("");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess(false);
+
+    // Use custom category text if Other was selected
+    const finalCategory = isOther
+      ? customCategory.trim()
+      : equipment.category;
+
+    if (!finalCategory) {
+      setError("Please enter a category name.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      await API.post("/equipment", equipment);
+      const res = await API.post("/equipment", { ...equipment, category: finalCategory });
+      const msg = res.data
+        ? `✅ "${res.data.name}" stock updated successfully! Redirecting…`
+        : "✅ Equipment saved successfully! Redirecting…";
+      setSuccessMsg(msg);
       setSuccess(true);
-      setEquipment({ name: "", category: "", totalQuantity: "", availableQuantity: "", location: "" });
+      setEquipment({
+        name: "",
+        category: "",
+        totalQuantity: "",
+        availableQuantity: "",
+        location: "",
+      });
+      setCustomCategory("");
       setTimeout(() => navigate("/equipment"), 1500);
     } catch {
       setError("Failed to add equipment. Please try again.");
@@ -35,8 +83,6 @@ function AddEquipment() {
       setLoading(false);
     }
   };
-
-  const categories = ["Microcontroller", "Sensor", "Measurement", "Power Supply", "Tool", "Module", "Display", "Other"];
 
   return (
     <div className="sl-page">
@@ -59,6 +105,7 @@ function AddEquipment() {
           <form onSubmit={handleSubmit}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
 
+              {/* Equipment Name — full width */}
               <div className="sl-form-group" style={{ gridColumn: "1 / -1" }}>
                 <label className="sl-label">Equipment Name *</label>
                 <input
@@ -71,6 +118,7 @@ function AddEquipment() {
                 />
               </div>
 
+              {/* Category dropdown */}
               <div className="sl-form-group">
                 <label className="sl-label">Category *</label>
                 <select
@@ -81,12 +129,13 @@ function AddEquipment() {
                   required
                 >
                   <option value="">Select category</option>
-                  {categories.map((c) => (
+                  {CATEGORIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
 
+              {/* Location */}
               <div className="sl-form-group">
                 <label className="sl-label">Location *</label>
                 <input
@@ -99,6 +148,37 @@ function AddEquipment() {
                 />
               </div>
 
+              {/* Custom category input — only shown when Other is selected */}
+              {isOther && (
+                <div
+                  className="sl-form-group"
+                  style={{
+                    gridColumn: "1 / -1",
+                    background: "var(--teal-50)",
+                    border: "1.5px solid var(--border-mid)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "14px 16px",
+                    animation: "fadeIn 0.2s ease",
+                  }}
+                >
+                  <label className="sl-label" style={{ color: "var(--primary-dark)" }}>
+                    ✏️ Enter Custom Category *
+                  </label>
+                  <input
+                    className="sl-input"
+                    placeholder="e.g. Communication Module, Robotics Kit…"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    autoFocus
+                    required={isOther}
+                  />
+                  <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>
+                    This name will be saved as the category for this equipment.
+                  </p>
+                </div>
+              )}
+
+              {/* Total Quantity */}
               <div className="sl-form-group">
                 <label className="sl-label">Total Quantity *</label>
                 <input
@@ -113,6 +193,7 @@ function AddEquipment() {
                 />
               </div>
 
+              {/* Available Quantity */}
               <div className="sl-form-group">
                 <label className="sl-label">Available Quantity *</label>
                 <input
@@ -131,7 +212,7 @@ function AddEquipment() {
 
             {success && (
               <div className="sl-toast sl-toast--success">
-                ✅ Equipment added successfully! Redirecting…
+                {successMsg}
               </div>
             )}
             {error && (
@@ -160,6 +241,14 @@ function AddEquipment() {
         </div>
 
       </div>
+
+      {/* Fade-in animation for the custom category box */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
