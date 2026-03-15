@@ -113,6 +113,7 @@ function Analytics() {
     if (!data) return;
     loadChartJs(() => draw(data));
     return () => ["monthly","most","category","least"].forEach(destroy);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const draw = d => {
@@ -191,7 +192,6 @@ function Analytics() {
     ? data.monthlyTrend.reduce((best, m) => m.borrows > (best?.borrows || 0) ? m : best, null)
     : null;
 
-  const leastName = data?.leastBorrowed?.[0]?.name || "—";
   const mostName  = data?.mostBorrowed?.[0]?.name  || "—";
 
   return (
