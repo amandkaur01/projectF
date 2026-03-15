@@ -64,14 +64,50 @@ function ReturnPage() {
     setMessage({ text: "", type: "" });
 
     try {
-      await API.put(`/borrow/return/${borrowId}/${qty}`);
-      setMessage({ text: "Equipment returned successfully! Thank you.", type: "success" });
-      setBorrowId("");
-      setQuantity("");
-      setBorrowInfo(null);
-    } catch {
+      const res = await API.put(`/borrow/return/${borrowId}/${qty}`);
+
+      // Backend returns null if qty > remaining or record not found
+      if (!res.data) {
+        const stillLeft = borrowInfo ? borrowInfo.remaining : "some";
+        setMessage({
+          text: `Could not process return. You have ${stillLeft} unit(s) remaining — please enter a quantity between 1 and ${stillLeft}.`,
+          type: "error",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const returned   = qty;
+      const newReturned = res.data.returnedQuantity;
+      const stillLeft  = res.data.quantity - newReturned;
+
+      const successText = stillLeft > 0
+        ? `✅ ${returned} unit(s) of ${res.data.equipmentName} returned successfully. You still have ${stillLeft} unit(s) remaining.`
+        : `✅ All ${returned} unit(s) of ${res.data.equipmentName} returned successfully. Thank you!`;
+
+      setMessage({ text: successText, type: "success" });
+
+      // Refresh borrow info to show updated state
+      if (stillLeft > 0) {
+        setBorrowInfo(prev => prev ? {
+          ...prev,
+          returnedQuantity: newReturned,
+          remaining: stillLeft,
+          status: res.data.status,
+        } : null);
+        setQuantity(String(stillLeft));
+      } else {
+        setBorrowId("");
+        setQuantity("");
+        setBorrowInfo(null);
+      }
+
+    } catch (err) {
+      const stillLeft = borrowInfo ? borrowInfo.remaining : null;
       setMessage({
-        text: "Return failed. Please verify the Borrow ID and quantity.",
+        text: stillLeft !== null
+          ? `Return failed. You have ${stillLeft} unit(s) remaining — please enter a value between 1 and ${stillLeft}.`
+          : "Return failed. Please check your Borrow ID and quantity.",
         type: "error",
       });
     } finally {
@@ -212,7 +248,7 @@ function ReturnPage() {
 
             {message.text && (
               <div className={`sl-toast sl-toast--${message.type}`}>
-                {message.type === "success" ? "✅" : "⚠️"} {message.text}
+                {message.type === "success" ? message.text : `⚠️ ${message.text}`}
               </div>
             )}
 
