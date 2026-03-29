@@ -33,6 +33,7 @@ function Dashboard() {
   const [activeAI,              setActiveAI]              = useState(null);
   const [emailLogs,             setEmailLogs]             = useState([]);
   const [triggerLoading,        setTriggerLoading]        = useState(false);
+  const [emailTriggerMsg,       setEmailTriggerMsg]       = useState(null);
 
   // Fetch both stats and equipment in one refresh cycle
   const fetchDashboardData = useCallback(() => {
@@ -75,7 +76,7 @@ function Dashboard() {
     setAnalysis("");
     axios.get(`${AI_BASE}/usage-analysis`)
       .then((res) => setAnalysis(res.data))
-      .catch(() => setAnalysis("⚠️ Could not reach AI service."))
+      .catch(() => setAnalysis("⚠️ AI service unavailable. Please add HUGGINGFACE_API_KEY in Render environment variables."))
       .finally(() => setLoadingAnalysis(false));
   };
 
@@ -85,7 +86,7 @@ function Dashboard() {
     setRecommendation("");
     axios.get(`${AI_BASE}/recommendation`)
       .then((res) => setRecommendation(res.data))
-      .catch(() => setRecommendation("⚠️ Could not reach AI service."))
+      .catch(() => setRecommendation("⚠️ AI service unavailable. Please add HUGGINGFACE_API_KEY in Render environment variables."))
       .finally(() => setLoadingRecommendation(false));
   };
 
@@ -96,7 +97,7 @@ function Dashboard() {
     setAnswer("");
     axios.post(`${AI_BASE}/chat`, { question })
       .then((res) => setAnswer(res.data))
-      .catch(() => setAnswer("⚠️ Could not reach AI service."))
+      .catch(() => setAnswer("⚠️ AI service unavailable. Please check HUGGINGFACE_API_KEY in Render environment variables."))
       .finally(() => setLoadingChat(false));
   };
 
@@ -105,11 +106,16 @@ function Dashboard() {
   const triggerEmailCheck = () => {
     setTriggerLoading(true);
     axios.post(`${EMAIL_BASE}/trigger`)
-      .then(() => {
-        axios.get(`${EMAIL_BASE}/logs`).then((res) => setEmailLogs(res.data)).catch(() => {});
-        alert("✅ Overdue email check completed. Check the log below.");
+      .then((res) => {
+        // Refresh email logs after trigger
+        axios.get(`${EMAIL_BASE}/logs`).then((r) => setEmailLogs(r.data)).catch(() => {});
+        setEmailTriggerMsg({ text: res.data || "Email check completed. Check the log below.", type: "success" });
+        setTimeout(() => setEmailTriggerMsg(null), 5000);
       })
-      .catch(() =>console.log("Email trigger unavailable in production - runs automatically at 8AM"))
+      .catch(() => {
+        setEmailTriggerMsg({ text: "Email check runs automatically at 8 AM daily.", type: "info" });
+        setTimeout(() => setEmailTriggerMsg(null), 4000);
+      })
       .finally(() => setTriggerLoading(false));
   };
 
@@ -373,14 +379,28 @@ function Dashboard() {
                 Auto-sends ₹500 fine warning to students with overdue equipment · Runs daily at 8:00 AM
               </div>
             </div>
-            <button
-              className="sl-btn sl-btn--primary sl-btn--sm"
-              onClick={triggerEmailCheck}
-              disabled={triggerLoading}
-              title="Manually trigger overdue email check now"
-            >
-              {triggerLoading ? <><span className="sl-spinner" /> Checking…</> : "▶ Run Now"}
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+              <button
+                className="sl-btn sl-btn--primary sl-btn--sm"
+                onClick={triggerEmailCheck}
+                disabled={triggerLoading}
+                title="Manually trigger overdue email check now"
+              >
+                {triggerLoading ? <><span className="sl-spinner" /> Checking…</> : "▶ Run Now"}
+              </button>
+              {emailTriggerMsg && (
+                <div style={{
+                  fontSize: "12px", fontWeight: 500, padding: "6px 12px",
+                  borderRadius: "8px",
+                  background: emailTriggerMsg.type === "success" ? "#d1fae5" : "#ccfbf1",
+                  color: emailTriggerMsg.type === "success" ? "#065f46" : "var(--teal-800)",
+                  border: emailTriggerMsg.type === "success" ? "1px solid #a7f3d0" : "1px solid var(--border-mid)",
+                  maxWidth: "260px", textAlign: "right",
+                }}>
+                  {emailTriggerMsg.type === "success" ? "✅ " : "ℹ️ "}{emailTriggerMsg.text}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Email log table */}
