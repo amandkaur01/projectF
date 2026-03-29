@@ -5,8 +5,9 @@ import axios from "axios";
 import Navbar from "../components/Navbar";
 import useAutoRefresh from "../hooks/useAutoRefresh";
 
-const AI_BASE    = "https://projectb-cxau.onrender.com/api/ai";
-const EMAIL_BASE = "https://projectb-cxau.onrender.com/api/email";
+const BASE       = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const AI_BASE    = `${BASE}/api/ai`;
+const EMAIL_BASE = `${BASE}/api/email`;
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ function Dashboard() {
         axios.get(`${EMAIL_BASE}/logs`).then((res) => setEmailLogs(res.data)).catch(() => {});
         alert("✅ Overdue email check completed. Check the log below.");
       })
-      .catch(() => alert("⚠️ Failed to trigger email check. Check backend."))
+      .catch(() => setMessage && console.log("Email trigger unavailable in production - runs automatically at 8AM"))
       .finally(() => setTriggerLoading(false));
   };
 
