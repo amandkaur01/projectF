@@ -109,7 +109,7 @@ function Dashboard() {
         axios.get(`${EMAIL_BASE}/logs`).then((res) => setEmailLogs(res.data)).catch(() => {});
         alert("✅ Overdue email check completed. Check the log below.");
       })
-      .catch(() => setMessage && console.log("Email trigger unavailable in production - runs automatically at 8AM"))
+      .catch(() =>console.log("Email trigger unavailable in production - runs automatically at 8AM"))
       .finally(() => setTriggerLoading(false));
   };
 
