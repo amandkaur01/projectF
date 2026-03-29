@@ -1,13 +1,9 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
-import axios from "axios";
 import Navbar from "../components/Navbar";
 import useAutoRefresh from "../hooks/useAutoRefresh";
 
-const BASE       = process.env.REACT_APP_API_URL || "http://localhost:8080";
-const AI_BASE    = `${BASE}/api/ai`;
-const EMAIL_BASE = `${BASE}/api/email`;
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -43,7 +39,7 @@ function Dashboard() {
       .catch((err) => console.log(err));
 
     // Email notification logs
-    axios.get(`${EMAIL_BASE}/logs`)
+    API.get("/api/email/logs")
       .then((res) => setEmailLogs(res.data))
       .catch(() => {});
 
@@ -74,9 +70,9 @@ function Dashboard() {
     setLoadingAnalysis(true);
     setActiveAI("analysis");
     setAnalysis("");
-    axios.get(`${AI_BASE}/usage-analysis`)
+    API.get("/api/ai/usage-analysis")
       .then((res) => setAnalysis(res.data))
-      .catch(() => setAnalysis("⚠️ AI service unavailable. Please add HUGGINGFACE_API_KEY in Render environment variables."))
+      .catch(() => setAnalysis("⚠️ AI service unavailable."))
       .finally(() => setLoadingAnalysis(false));
   };
 
@@ -84,9 +80,9 @@ function Dashboard() {
     setLoadingRecommendation(true);
     setActiveAI("recommendation");
     setRecommendation("");
-    axios.get(`${AI_BASE}/recommendation`)
+    API.get("/api/ai/recommendation")
       .then((res) => setRecommendation(res.data))
-      .catch(() => setRecommendation("⚠️ AI service unavailable. Please add HUGGINGFACE_API_KEY in Render environment variables."))
+      .catch(() => setRecommendation("⚠️ AI service unavailable."))
       .finally(() => setLoadingRecommendation(false));
   };
 
@@ -95,9 +91,9 @@ function Dashboard() {
     setLoadingChat(true);
     setActiveAI("chat");
     setAnswer("");
-    axios.post(`${AI_BASE}/chat`, { question })
+    API.post("/api/ai/chat", { question })
       .then((res) => setAnswer(res.data))
-      .catch(() => setAnswer("⚠️ AI service unavailable. Please check HUGGINGFACE_API_KEY in Render environment variables."))
+      .catch(() => setAnswer("⚠️ AI service unavailable."))
       .finally(() => setLoadingChat(false));
   };
 
@@ -105,10 +101,10 @@ function Dashboard() {
 
   const triggerEmailCheck = () => {
     setTriggerLoading(true);
-    axios.post(`${EMAIL_BASE}/trigger`)
+    API.post("/api/email/trigger")
       .then((res) => {
         // Refresh email logs after trigger
-        axios.get(`${EMAIL_BASE}/logs`).then((r) => setEmailLogs(r.data)).catch(() => {});
+        API.get("/api/email/logs").then((r) => setEmailLogs(r.data)).catch(() => {});
         setEmailTriggerMsg({ text: res.data || "Email check completed. Check the log below.", type: "success" });
         setTimeout(() => setEmailTriggerMsg(null), 5000);
       })
